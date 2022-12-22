@@ -13,6 +13,7 @@ import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 
 import java.lang.annotation.Retention;
@@ -175,6 +176,11 @@ public class RangeSeekBar extends View {
     private int progressPaddingRight;
     private OnRangeChangedListener callback;
 
+    int mTouchSlop;
+    float mStartY;
+    float mStartX;
+    boolean mDragger;
+
     public RangeSeekBar(Context context) {
         this(context, null);
     }
@@ -182,6 +188,7 @@ public class RangeSeekBar extends View {
     public RangeSeekBar(Context context, AttributeSet attrs) {
         super(context, attrs);
         initAttrs(attrs);
+        mTouchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
         initPaint();
         initSeekBar(attrs);
         initStepsBitmap();
@@ -588,6 +595,10 @@ public class RangeSeekBar extends View {
 
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
+                // 记录手指按下的位置
+                mStartY = event.getY();
+                mStartX = event.getX();
+                mDragger = false;
                 touchDownX = getEventX(event);
                 touchDownY = getEventY(event);
                 if (seekBarMode == SEEKBAR_MODE_RANGE) {
@@ -625,48 +636,56 @@ public class RangeSeekBar extends View {
                 return true;
             case MotionEvent.ACTION_MOVE:
                 float x = getEventX(event);
-                if ((seekBarMode == SEEKBAR_MODE_RANGE) && leftSB.currPercent == rightSB.currPercent) {
-                    currTouchSB.materialRestore();
-                    if (callback != null) {
-                        callback.onStopTrackingTouch(this, currTouchSB == leftSB);
-                    }
-                    if (x - touchDownX > 0) {
-                        //method to move right
-                        if (currTouchSB != rightSB) {
-                            currTouchSB.setShowIndicatorEnable(false);
-                            resetCurrentSeekBarThumb();
-                            currTouchSB = rightSB;
+                float distanceLeft = event.getY();
+                float distanceRight = event.getX();
+                float distanceX = Math.abs(distanceRight - this.mStartX);
+                float distanceY = Math.abs(distanceLeft - this.mStartY);
+                if (distanceX > this.mTouchSlop && distanceX > distanceY || this.mDragger) {
+                    if ((seekBarMode == SEEKBAR_MODE_RANGE) && leftSB.currPercent == rightSB.currPercent) {
+                        currTouchSB.materialRestore();
+                        if (callback != null) {
+                            callback.onStopTrackingTouch(this, currTouchSB == leftSB);
                         }
-                    } else {
-                        //method to move left
-                        if (currTouchSB != leftSB) {
-                            currTouchSB.setShowIndicatorEnable(false);
-                            resetCurrentSeekBarThumb();
-                            currTouchSB = leftSB;
+                        if (x - touchDownX > 0) {
+                            //method to move right
+                            if (currTouchSB != rightSB) {
+                                currTouchSB.setShowIndicatorEnable(false);
+                                resetCurrentSeekBarThumb();
+                                currTouchSB = rightSB;
+                            }
+                        } else {
+                            //method to move left
+                            if (currTouchSB != leftSB) {
+                                currTouchSB.setShowIndicatorEnable(false);
+                                resetCurrentSeekBarThumb();
+                                currTouchSB = leftSB;
+                            }
+                        }
+                        if (callback != null) {
+                            callback.onStartTrackingTouch(this, currTouchSB == leftSB);
                         }
                     }
-                    if (callback != null) {
-                        callback.onStartTrackingTouch(this, currTouchSB == leftSB);
-                    }
-                }
-                scaleCurrentSeekBarThumb();
-                currTouchSB.material = currTouchSB.material >= 1 ? 1 : currTouchSB.material + 0.1f;
-                touchDownX = x;
-                currTouchSB.slide(calculateCurrentSeekBarPercent(touchDownX));
-                currTouchSB.setShowIndicatorEnable(true);
+                    scaleCurrentSeekBarThumb();
+                    currTouchSB.material = currTouchSB.material >= 1 ? 1 : currTouchSB.material + 0.1f;
+                    touchDownX = x;
+                    currTouchSB.slide(calculateCurrentSeekBarPercent(touchDownX));
+                    currTouchSB.setShowIndicatorEnable(true);
 
-                if (callback != null) {
-                    SeekBarState[] states = getRangeSeekBarState();
-                    callback.onRangeChanged(this, states[0].value, states[1].value, true);
+                    if (callback != null) {
+                        SeekBarState[] states = getRangeSeekBarState();
+                        callback.onRangeChanged(this, states[0].value, states[1].value, true);
+                    }
+                    invalidate();
+                    //Intercept parent TouchEvent
+                    if (getParent() != null) {
+                        getParent().requestDisallowInterceptTouchEvent(true);
+                        this.mDragger = true;
+                    }
+                    changeThumbActivateState(true);
                 }
-                invalidate();
-                //Intercept parent TouchEvent
-                if (getParent() != null) {
-                    getParent().requestDisallowInterceptTouchEvent(true);
-                }
-                changeThumbActivateState(true);
                 break;
             case MotionEvent.ACTION_CANCEL:
+                mDragger = false;
                 if (seekBarMode == SEEKBAR_MODE_RANGE) {
                     rightSB.setShowIndicatorEnable(false);
                 }
@@ -687,6 +706,7 @@ public class RangeSeekBar extends View {
                 changeThumbActivateState(false);
                 break;
             case MotionEvent.ACTION_UP:
+                mDragger = false;
                 if (verifyStepsMode() && stepsAutoBonding) {
                     float percent = calculateCurrentSeekBarPercent(getEventX(event));
                     float stepPercent = 1.0f / steps;
