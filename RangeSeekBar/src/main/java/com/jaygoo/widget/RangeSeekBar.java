@@ -180,7 +180,7 @@ public class RangeSeekBar extends View {
     int mTouchSlop;
     float mStartY;
     float mStartX;
-    boolean mDragger;
+    boolean mDragger = false;
 
     public RangeSeekBar(Context context) {
         this(context, null);
@@ -630,10 +630,6 @@ public class RangeSeekBar extends View {
                     scaleCurrentSeekBarThumb();
                 }
 
-                //Intercept parent TouchEvent
-                if (getParent() != null) {
-                    getParent().requestDisallowInterceptTouchEvent(true);
-                }
                 if (callback != null) {
                     callback.onStartTrackingTouch(this, currTouchSB == leftSB);
                 }
@@ -645,7 +641,7 @@ public class RangeSeekBar extends View {
                 float distanceRight = event.getX();
                 float distanceX = Math.abs(distanceRight - this.mStartX);
                 float distanceY = Math.abs(distanceLeft - this.mStartY);
-                if (distanceX > this.mTouchSlop && distanceX > distanceY || this.mDragger) {
+                if ((distanceX > this.mTouchSlop && distanceX > distanceY) || this.mDragger) {
                     if ((seekBarMode == SEEKBAR_MODE_RANGE) && leftSB.currPercent == rightSB.currPercent) {
                         currTouchSB.materialRestore();
                         if (callback != null) {
@@ -704,10 +700,6 @@ public class RangeSeekBar extends View {
                     SeekBarState[] states = getRangeSeekBarState();
                     callback.onRangeChanged(this, states[0].value, states[1].value, false);
                 }
-                //Intercept parent TouchEvent
-                if (getParent() != null) {
-                    getParent().requestDisallowInterceptTouchEvent(true);
-                }
                 changeThumbActivateState(false);
                 break;
             case MotionEvent.ACTION_UP:
@@ -728,10 +720,6 @@ public class RangeSeekBar extends View {
                 if (callback != null) {
                     SeekBarState[] states = getRangeSeekBarState();
                     callback.onRangeChanged(this, states[0].value, states[1].value, false);
-                }
-                //Intercept parent TouchEvent
-                if (getParent() != null) {
-                    getParent().requestDisallowInterceptTouchEvent(true);
                 }
                 if (callback != null) {
                     callback.onStopTrackingTouch(this, currTouchSB == leftSB);
