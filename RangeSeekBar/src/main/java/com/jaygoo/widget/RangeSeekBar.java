@@ -22,6 +22,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import static com.jaygoo.widget.SeekBar.INDICATOR_ALWAYS_HIDE;
 import static com.jaygoo.widget.SeekBar.INDICATOR_ALWAYS_SHOW;
@@ -172,7 +173,7 @@ public class RangeSeekBar extends View {
     SeekBar currTouchSB;
     Bitmap progressBitmap;
     Bitmap progressDefaultBitmap;
-    List<Bitmap> stepsBitmaps = new ArrayList<>();
+    List<Bitmap> stepsBitmaps = new CopyOnWriteArrayList<>();
     private int progressPaddingRight;
     private OnRangeChangedListener callback;
 
@@ -491,11 +492,15 @@ public class RangeSeekBar extends View {
         for (int k = 0; k <= steps; k++) {
             float x = getProgressLeft() + k * stepMarks - stepsWidth / 2f;
             stepDivRect.set(x, getProgressTop() - extHeight, x + stepsWidth, getProgressBottom() + extHeight);
-            if (stepsBitmaps.isEmpty() || stepsBitmaps.size() <= k) {
+            Bitmap bitmap = null;
+            if(!stepsBitmaps.isEmpty() && stepsBitmaps.size() > k){
+                bitmap = stepsBitmaps.get(k);
+            }
+            if (bitmap == null) {
                 paint.setColor(stepsColor);
                 canvas.drawRoundRect(stepDivRect, stepsRadius, stepsRadius, paint);
             } else {
-                canvas.drawBitmap(stepsBitmaps.get(k), null, stepDivRect, paint);
+                canvas.drawBitmap(bitmap, null, stepDivRect, paint);
             }
         }
     }
