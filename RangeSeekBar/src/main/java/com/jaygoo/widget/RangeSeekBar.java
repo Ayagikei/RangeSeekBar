@@ -496,11 +496,11 @@ public class RangeSeekBar extends View {
             if(!stepsBitmaps.isEmpty() && stepsBitmaps.size() > k){
                 bitmap = stepsBitmaps.get(k);
             }
-            if (bitmap == null) {
+            if(Utils.verifyBitmap(bitmap)) {
+                canvas.drawBitmap(bitmap, null, stepDivRect, paint);
+            }else{
                 paint.setColor(stepsColor);
                 canvas.drawRoundRect(stepDivRect, stepsRadius, stepsRadius, paint);
-            } else {
-                canvas.drawBitmap(bitmap, null, stepDivRect, paint);
             }
         }
     }
